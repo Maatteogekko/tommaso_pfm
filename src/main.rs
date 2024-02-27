@@ -31,7 +31,7 @@ For now, we will call this structure a Transaction.
 
 use std::{collections::HashMap, env, error::Error, ffi::OsString, process};
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Utc};
 use serde::Deserialize;
 
 fn main() {
@@ -51,6 +51,10 @@ fn main() {
     println!("Total spending per category:");
     let spending = spending_by_category(&transactions);
     println!("{:#?}", spending);
+
+    println!("Total spending per month:");
+    let spending = spending_by_month(&transactions);
+    println!("{:#?}", spending);
 }
 
 #[derive(Debug, Deserialize)]
@@ -59,6 +63,12 @@ struct Transaction {
     date: DateTime<Utc>,
     category: String,
     amount: f64,
+}
+
+impl Transaction {
+    fn month(&self) -> String {
+        format!("{}-{}", self.date.year(), self.date.month())
+    }
 }
 
 fn parse() -> Result<Vec<Transaction>, Box<dyn Error>> {
@@ -76,12 +86,23 @@ fn parse() -> Result<Vec<Transaction>, Box<dyn Error>> {
     Ok(transactions)
 }
 
-fn spending_by_category(transactions: &Vec<Transaction>) -> HashMap<String, f64> {
+fn spending_by_category(transactions: &[Transaction]) -> HashMap<String, f64> {
     let mut map: HashMap<String, f64> = HashMap::new();
     for transaction in transactions.iter() {
         match map.get_key_value(&transaction.category) {
             Some((category, amount)) => map.insert(category.clone(), amount + transaction.amount),
             None => map.insert(transaction.category.clone(), transaction.amount),
+        };
+    }
+    map
+}
+
+fn spending_by_month(transactions: &[Transaction]) -> HashMap<String, f64> {
+    let mut map: HashMap<String, f64> = HashMap::new();
+    for transaction in transactions.iter() {
+        match map.get_key_value(&transaction.month()) {
+            Some((month, amount)) => map.insert(month.clone(), amount + transaction.amount),
+            None => map.insert(transaction.month().clone(), transaction.amount),
         };
     }
     map
