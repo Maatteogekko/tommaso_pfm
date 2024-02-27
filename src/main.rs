@@ -29,7 +29,7 @@ For now, we will call this structure a Transaction.
 - BONUS: Implement a function that, given a list of transactions, returns how much was spent each month per each category.
 */
 
-use std::{env, error::Error, ffi::OsString, process};
+use std::{collections::HashMap, env, error::Error, ffi::OsString, process};
 
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -43,9 +43,14 @@ fn main() {
         Ok(value) => value,
     };
 
+    println!("Transactions:");
     for transaction in transactions.iter() {
         println!("{:#?}", transaction);
     }
+
+    println!("Total spending per category:");
+    let spending = spending_by_category(&transactions);
+    println!("{:#?}", spending);
 }
 
 #[derive(Debug, Deserialize)]
@@ -69,6 +74,17 @@ fn parse() -> Result<Vec<Transaction>, Box<dyn Error>> {
         transactions.push(record);
     }
     Ok(transactions)
+}
+
+fn spending_by_category(transactions: &Vec<Transaction>) -> HashMap<String, f64> {
+    let mut map: HashMap<String, f64> = HashMap::new();
+    for transaction in transactions.iter() {
+        match map.get_key_value(&transaction.category) {
+            Some((category, amount)) => map.insert(category.clone(), amount + transaction.amount),
+            None => map.insert(transaction.category.clone(), transaction.amount),
+        };
+    }
+    map
 }
 
 /// Returns the first positional argument sent to this process. If there are no
