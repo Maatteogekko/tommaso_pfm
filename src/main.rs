@@ -38,7 +38,7 @@ fn main() {
     // wether incomes should be considered "negative spendings".
     let relative = true;
 
-    let mut transactions = match parse() {
+    let mut transactions = match get_first_arg().and_then(parse) {
         Err(err) => {
             println!("{}", err);
             process::exit(1);
@@ -109,8 +109,16 @@ impl fmt::Display for Transaction {
     }
 }
 
-fn parse() -> Result<Vec<Transaction>, Box<dyn Error>> {
-    let file_path = get_first_arg()?;
+/// Returns the first positional argument sent to this process. If there are no
+/// positional arguments, then this returns an error.
+fn get_first_arg() -> Result<OsString, Box<dyn Error>> {
+    match env::args_os().nth(1) {
+        None => Err(From::from("expected 1 argument, but got none")),
+        Some(file_path) => Ok(file_path),
+    }
+}
+
+fn parse(file_path: OsString) -> Result<Vec<Transaction>, Box<dyn Error>> {
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b';')
@@ -169,13 +177,4 @@ fn spending_per_month_per_category(
         .into_iter()
         .map(|(month, transactions)| (month, spending_per_category(&transactions)))
         .collect()
-}
-
-/// Returns the first positional argument sent to this process. If there are no
-/// positional arguments, then this returns an error.
-fn get_first_arg() -> Result<OsString, Box<dyn Error>> {
-    match env::args_os().nth(1) {
-        None => Err(From::from("expected 1 argument, but got none")),
-        Some(file_path) => Ok(file_path),
-    }
 }
