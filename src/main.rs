@@ -39,11 +39,11 @@ fn main() {
     let relative = true;
 
     let (mut transactions, skipped) = match get_first_arg().and_then(parse) {
+        Ok(value) => value,
         Err(err) => {
             println!("{}", err);
             process::exit(1);
         }
-        Ok(value) => value,
     };
     if skipped > 0 {
         println!("WARNING Skipped {} malformed transactions", skipped);
@@ -116,8 +116,8 @@ impl fmt::Display for Transaction {
 /// positional arguments, then this returns an error.
 fn get_first_arg() -> Result<OsString, Box<dyn Error>> {
     match env::args_os().nth(1) {
-        None => Err(From::from("expected 1 argument, but got none")),
         Some(file_path) => Ok(file_path),
+        None => Err(From::from("expected 1 argument, but got none")),
     }
 }
 
@@ -132,8 +132,8 @@ fn parse(file_path: OsString) -> Result<(Vec<Transaction>, u8), Box<dyn Error>> 
     let mut transactions = Vec::new();
     for result in reader.deserialize() {
         match result {
-            Err(_) => malformed += 1,
             Ok(transaction) => transactions.push(transaction),
+            Err(_) => malformed += 1,
         };
     }
     Ok((transactions, malformed))
