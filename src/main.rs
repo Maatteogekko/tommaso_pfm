@@ -38,13 +38,16 @@ fn main() {
     // wether incomes should be considered "negative spendings".
     let relative = true;
 
-    let mut transactions = match get_first_arg().and_then(parse) {
+    let (mut transactions, skipped) = match get_first_arg().and_then(parse) {
         Err(err) => {
             println!("{}", err);
             process::exit(1);
         }
         Ok(value) => value,
     };
+    if skipped > 0 {
+        println!("WARNING Skipped {} malformed transactions", skipped);
+    }
 
     println!("-> Transactions:");
     for transaction in transactions.iter() {
@@ -118,18 +121,22 @@ fn get_first_arg() -> Result<OsString, Box<dyn Error>> {
     }
 }
 
-fn parse(file_path: OsString) -> Result<Vec<Transaction>, Box<dyn Error>> {
+fn parse(file_path: OsString) -> Result<(Vec<Transaction>, u8), Box<dyn Error>> {
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b';')
+        .flexible(true)
         .from_path(file_path)?;
 
+    let mut malformed = 0;
     let mut transactions = Vec::new();
     for result in reader.deserialize() {
-        let record: Transaction = result?;
-        transactions.push(record);
+        match result {
+            Err(_) => malformed += 1,
+            Ok(transaction) => transactions.push(transaction),
+        };
     }
-    Ok(transactions)
+    Ok((transactions, malformed))
 }
 
 fn spending_per_category(transactions: &[Transaction]) -> HashMap<String, f64> {
