@@ -55,6 +55,10 @@ fn main() {
     println!("Total spending per month:");
     let spending = spending_by_month(&transactions);
     println!("{:#?}", spending);
+
+    println!("Average month spending:");
+    let spending = spending_month_average(&transactions);
+    println!("{:#?}", spending);
 }
 
 #[derive(Debug, Deserialize)]
@@ -106,6 +110,17 @@ fn spending_by_month(transactions: &[Transaction]) -> HashMap<String, f64> {
         };
     }
     map
+}
+
+fn spending_month_average(transactions: &[Transaction]) -> f64 {
+    let month_spendings = spending_by_month(transactions);
+    let sum: f64 = month_spendings.values().sum();
+    let count = month_spendings.len();
+    if count > 0 {
+        sum / count as f64
+    } else {
+        0.0
+    }
 }
 
 /// Returns the first positional argument sent to this process. If there are no
