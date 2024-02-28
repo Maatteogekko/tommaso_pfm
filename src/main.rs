@@ -49,11 +49,11 @@ fn main() {
     }
 
     println!("Total spending per category:");
-    let spending = spending_by_category(&transactions);
+    let spending = spending_per_category(&transactions);
     println!("{:#?}", spending);
 
     println!("Total spending per month:");
-    let spending = spending_by_month(&transactions);
+    let spending = spending_per_month(&transactions);
     println!("{:#?}", spending);
 
     println!("Average month spending:");
@@ -61,7 +61,7 @@ fn main() {
     println!("{:#?}", spending);
 
     println!("Total spending per month per category:");
-    let spending = spending_by_month_by_category(&transactions);
+    let spending = spending_per_month_per_category(&transactions);
     println!("{:#?}", spending);
 }
 
@@ -94,30 +94,24 @@ fn parse() -> Result<Vec<Transaction>, Box<dyn Error>> {
     Ok(transactions)
 }
 
-fn spending_by_category(transactions: &[Transaction]) -> HashMap<String, f64> {
+fn spending_per_category(transactions: &[Transaction]) -> HashMap<String, f64> {
     let mut map: HashMap<String, f64> = HashMap::new();
-    for transaction in transactions.iter() {
-        match map.get_key_value(&transaction.category) {
-            None => map.insert(transaction.category.clone(), transaction.amount),
-            Some((category, amount)) => map.insert(category.clone(), amount + transaction.amount),
-        };
+    for transaction in transactions {
+        *map.entry(transaction.category.clone()).or_default() += transaction.amount;
     }
     map
 }
 
-fn spending_by_month(transactions: &[Transaction]) -> HashMap<String, f64> {
+fn spending_per_month(transactions: &[Transaction]) -> HashMap<String, f64> {
     let mut map: HashMap<String, f64> = HashMap::new();
-    for transaction in transactions.iter() {
-        match map.get_key_value(&transaction.month()) {
-            None => map.insert(transaction.month().clone(), transaction.amount),
-            Some((month, amount)) => map.insert(month.clone(), amount + transaction.amount),
-        };
+    for transaction in transactions {
+        *map.entry(transaction.month()).or_default() += transaction.amount;
     }
     map
 }
 
 fn spending_month_average(transactions: &[Transaction]) -> f64 {
-    let month_spendings = spending_by_month(transactions);
+    let month_spendings = spending_per_month(transactions);
     let sum: f64 = month_spendings.values().sum();
     let count = month_spendings.len();
     if count > 0 {
@@ -128,24 +122,22 @@ fn spending_month_average(transactions: &[Transaction]) -> f64 {
 }
 
 /// Returns a map of `<Month, <Category, amount>>`.
-fn spending_by_month_by_category(
+fn spending_per_month_per_category(
     transactions: &[Transaction],
 ) -> HashMap<String, HashMap<String, f64>> {
     // first cluster the transactions by month
     let mut months_map: HashMap<String, Vec<Transaction>> = HashMap::new();
-    for transaction in transactions.iter() {
-        match months_map.get_mut(&transaction.month()) {
-            None => {
-                months_map.insert(transaction.month().clone(), vec![transaction.clone()]);
-            }
-            Some(transactions) => transactions.push(transaction.clone()),
-        };
+    for transaction in transactions {
+        months_map
+            .entry(transaction.month())
+            .or_default()
+            .push(transaction.clone());
     }
 
     // then process spending for each cluster
     months_map
         .into_iter()
-        .map(|(month, transactions)| (month, spending_by_category(&transactions)))
+        .map(|(month, transactions)| (month, spending_per_category(&transactions)))
         .collect()
 }
 
