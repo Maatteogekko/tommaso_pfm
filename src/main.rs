@@ -29,14 +29,14 @@ For now, we will call this structure a Transaction.
 - BONUS: Implement a function that, given a list of transactions, returns how much was spent each month per each category.
 */
 
-use std::{collections::HashMap, env, error::Error, ffi::OsString, process};
+use std::{collections::HashMap, env, error::Error, ffi::OsString, fmt, process};
 
 use chrono::{DateTime, Datelike, Utc};
 use serde::Deserialize;
 
 fn main() {
     // wether incomes should be considered "negative spendings".
-    let relative = false;
+    let relative = true;
 
     let mut transactions = match parse() {
         Err(err) => {
@@ -45,30 +45,41 @@ fn main() {
         }
         Ok(value) => value,
     };
+
+    println!("-> Transactions:");
+    for transaction in transactions.iter() {
+        println!("• {}", transaction);
+    }
+    println!();
+
     if !relative {
         transactions.retain(|v| v.amount < 0 as f64);
     }
 
-    println!("Transactions:");
-    for transaction in transactions.iter() {
-        println!("{:#?}", transaction);
+    println!("-> Total spending per category:");
+    for (key, value) in spending_per_category(&transactions) {
+        println!("{}: {:.2}", key, value);
     }
+    println!();
 
-    println!("Total spending per category:");
-    let spending = spending_per_category(&transactions);
-    println!("{:#?}", spending);
+    println!("-> Total spending per month:");
+    for (key, value) in spending_per_month(&transactions) {
+        println!("{}: {:.2}", key, value);
+    }
+    println!();
 
-    println!("Total spending per month:");
-    let spending = spending_per_month(&transactions);
-    println!("{:#?}", spending);
+    println!(
+        "-> Average month spending: {:.2}\n",
+        spending_month_average(&transactions)
+    );
 
-    println!("Average month spending:");
-    let spending = spending_month_average(&transactions);
-    println!("{:#?}", spending);
-
-    println!("Total spending per month per category:");
-    let spending = spending_per_month_per_category(&transactions);
-    println!("{:#?}", spending);
+    println!("-> Total spending per month per category:");
+    for (key, value) in spending_per_month_per_category(&transactions) {
+        println!("{}:", key);
+        for (key, value) in value {
+            println!("\t{}: {:.2}", key, value);
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -82,6 +93,19 @@ struct Transaction {
 impl Transaction {
     fn month(&self) -> String {
         format!("{}-{}", self.date.year(), self.date.month())
+    }
+}
+
+impl fmt::Display for Transaction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}\n\tDate: {}\n\tCategory: {}\n\tAmount: {:.2}",
+            self.description,
+            self.date.format("%Y-%m-%d %H:%M:%S"),
+            self.category,
+            self.amount
+        )
     }
 }
 
