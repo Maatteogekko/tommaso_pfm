@@ -35,13 +35,19 @@ use chrono::{DateTime, Datelike, Utc};
 use serde::Deserialize;
 
 fn main() {
-    let transactions = match parse() {
+    // wether incomes should be considered "negative spendings".
+    let relative = false;
+
+    let mut transactions = match parse() {
         Err(err) => {
             println!("{}", err);
             process::exit(1);
         }
         Ok(value) => value,
     };
+    if !relative {
+        transactions.retain(|v| v.amount < 0 as f64);
+    }
 
     println!("Transactions:");
     for transaction in transactions.iter() {
