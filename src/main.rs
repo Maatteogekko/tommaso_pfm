@@ -59,9 +59,13 @@ fn main() {
     println!("Average month spending:");
     let spending = spending_month_average(&transactions);
     println!("{:#?}", spending);
+
+    println!("Total spending per month per category:");
+    let spending = spending_by_month_by_category(&transactions);
+    println!("{:#?}", spending);
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct Transaction {
     description: String,
     date: DateTime<Utc>,
@@ -94,8 +98,8 @@ fn spending_by_category(transactions: &[Transaction]) -> HashMap<String, f64> {
     let mut map: HashMap<String, f64> = HashMap::new();
     for transaction in transactions.iter() {
         match map.get_key_value(&transaction.category) {
-            Some((category, amount)) => map.insert(category.clone(), amount + transaction.amount),
             None => map.insert(transaction.category.clone(), transaction.amount),
+            Some((category, amount)) => map.insert(category.clone(), amount + transaction.amount),
         };
     }
     map
@@ -105,8 +109,8 @@ fn spending_by_month(transactions: &[Transaction]) -> HashMap<String, f64> {
     let mut map: HashMap<String, f64> = HashMap::new();
     for transaction in transactions.iter() {
         match map.get_key_value(&transaction.month()) {
-            Some((month, amount)) => map.insert(month.clone(), amount + transaction.amount),
             None => map.insert(transaction.month().clone(), transaction.amount),
+            Some((month, amount)) => map.insert(month.clone(), amount + transaction.amount),
         };
     }
     map
@@ -121,6 +125,28 @@ fn spending_month_average(transactions: &[Transaction]) -> f64 {
     } else {
         0.0
     }
+}
+
+/// Returns a map of `<Month, <Category, amount>>`.
+fn spending_by_month_by_category(
+    transactions: &[Transaction],
+) -> HashMap<String, HashMap<String, f64>> {
+    // first cluster the transactions by month
+    let mut months_map: HashMap<String, Vec<Transaction>> = HashMap::new();
+    for transaction in transactions.iter() {
+        match months_map.get_mut(&transaction.month()) {
+            None => {
+                months_map.insert(transaction.month().clone(), vec![transaction.clone()]);
+            }
+            Some(transactions) => transactions.push(transaction.clone()),
+        };
+    }
+
+    // then process spending for each cluster
+    months_map
+        .into_iter()
+        .map(|(month, transactions)| (month, spending_by_category(&transactions)))
+        .collect()
 }
 
 /// Returns the first positional argument sent to this process. If there are no
