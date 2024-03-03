@@ -55,7 +55,7 @@ fn main() {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-struct Transaction {
+pub struct Transaction {
     description: String,
     date: DateTime<Utc>,
     category: String,
@@ -90,7 +90,7 @@ fn get_first_arg() -> Result<OsString, Box<dyn Error>> {
     }
 }
 
-fn parse(file_path: OsString) -> Result<(Vec<Transaction>, u8), Box<dyn Error>> {
+pub fn parse(file_path: OsString) -> Result<(Vec<Transaction>, u8), Box<dyn Error>> {
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b';')
@@ -108,7 +108,7 @@ fn parse(file_path: OsString) -> Result<(Vec<Transaction>, u8), Box<dyn Error>> 
     Ok((transactions, malformed))
 }
 
-fn spending_per_category(transactions: &[Transaction]) -> HashMap<String, f64> {
+pub fn spending_per_category(transactions: &[Transaction]) -> HashMap<String, f64> {
     let mut map: HashMap<String, f64> = HashMap::new();
     for transaction in transactions {
         *map.entry(transaction.category.clone()).or_default() += transaction.amount;
@@ -116,7 +116,7 @@ fn spending_per_category(transactions: &[Transaction]) -> HashMap<String, f64> {
     map
 }
 
-fn spending_per_month(transactions: &[Transaction]) -> HashMap<String, f64> {
+pub fn spending_per_month(transactions: &[Transaction]) -> HashMap<String, f64> {
     let mut map: HashMap<String, f64> = HashMap::new();
     for transaction in transactions {
         *map.entry(transaction.month()).or_default() += transaction.amount;
@@ -124,7 +124,7 @@ fn spending_per_month(transactions: &[Transaction]) -> HashMap<String, f64> {
     map
 }
 
-fn spending_month_average(transactions: &[Transaction]) -> f64 {
+pub fn spending_month_average(transactions: &[Transaction]) -> f64 {
     let month_spendings = spending_per_month(transactions);
     let sum: f64 = month_spendings.values().sum();
     let count = month_spendings.len();
@@ -136,7 +136,7 @@ fn spending_month_average(transactions: &[Transaction]) -> f64 {
 }
 
 /// Returns a map of `<Month, <Category, amount>>`.
-fn spending_per_month_per_category(
+pub fn spending_per_month_per_category(
     transactions: &[Transaction],
 ) -> HashMap<String, HashMap<String, f64>> {
     // first cluster the transactions by month
