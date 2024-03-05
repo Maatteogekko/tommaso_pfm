@@ -1,7 +1,9 @@
-use std::{collections::HashMap, env, error::Error, ffi::OsString, fmt, process};
+use std::{env, error::Error, ffi::OsString, process};
 
-use chrono::{DateTime, Datelike, Utc};
-use serde::Deserialize;
+use tommaso_pfm::{
+    parse, spending_month_average, spending_per_category, spending_per_month,
+    spending_per_month_per_category,
+};
 
 fn main() {
     // wether incomes should be considered "negative spendings".
@@ -54,33 +56,6 @@ fn main() {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct Transaction {
-    description: String,
-    date: DateTime<Utc>,
-    category: String,
-    amount: f64,
-}
-
-impl Transaction {
-    fn month(&self) -> String {
-        format!("{}-{}", self.date.year(), self.date.month())
-    }
-}
-
-impl fmt::Display for Transaction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}\n\tDate: {}\n\tCategory: {}\n\tAmount: {:.2}",
-            self.description,
-            self.date.format("%Y-%m-%d %H:%M:%S"),
-            self.category,
-            self.amount
-        )
-    }
-}
-
 /// Returns the first positional argument sent to this process. If there are no
 /// positional arguments, then this returns an error.
 fn get_first_arg() -> Result<OsString, Box<dyn Error>> {
@@ -88,69 +63,4 @@ fn get_first_arg() -> Result<OsString, Box<dyn Error>> {
         Some(file_path) => Ok(file_path),
         None => Err(From::from("expected 1 argument, but got none")),
     }
-}
-
-pub fn parse(file_path: OsString) -> Result<(Vec<Transaction>, u8), Box<dyn Error>> {
-    let mut reader = csv::ReaderBuilder::new()
-        .has_headers(false)
-        .delimiter(b';')
-        .flexible(true)
-        .from_path(file_path)?;
-
-    let mut malformed = 0;
-    let mut transactions = Vec::new();
-    for result in reader.deserialize() {
-        match result {
-            Ok(transaction) => transactions.push(transaction),
-            Err(_) => malformed += 1,
-        };
-    }
-    Ok((transactions, malformed))
-}
-
-pub fn spending_per_category(transactions: &[Transaction]) -> HashMap<String, f64> {
-    let mut map: HashMap<String, f64> = HashMap::new();
-    for transaction in transactions {
-        *map.entry(transaction.category.clone()).or_default() += transaction.amount;
-    }
-    map
-}
-
-pub fn spending_per_month(transactions: &[Transaction]) -> HashMap<String, f64> {
-    let mut map: HashMap<String, f64> = HashMap::new();
-    for transaction in transactions {
-        *map.entry(transaction.month()).or_default() += transaction.amount;
-    }
-    map
-}
-
-pub fn spending_month_average(transactions: &[Transaction]) -> f64 {
-    let month_spendings = spending_per_month(transactions);
-    let sum: f64 = month_spendings.values().sum();
-    let count = month_spendings.len();
-    if count > 0 {
-        sum / count as f64
-    } else {
-        0.0
-    }
-}
-
-/// Returns a map of `<Month, <Category, amount>>`.
-pub fn spending_per_month_per_category(
-    transactions: &[Transaction],
-) -> HashMap<String, HashMap<String, f64>> {
-    // first cluster the transactions by month
-    let mut months_map: HashMap<String, Vec<Transaction>> = HashMap::new();
-    for transaction in transactions {
-        months_map
-            .entry(transaction.month())
-            .or_default()
-            .push(transaction.clone());
-    }
-
-    // then process spending for each cluster
-    months_map
-        .into_iter()
-        .map(|(month, transactions)| (month, spending_per_category(&transactions)))
-        .collect()
 }
